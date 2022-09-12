@@ -10,7 +10,7 @@ class VelocidadePub(Node):
         super().__init__('velocidadepub')
         self.velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
         timer_period = 0.01
-        self.timer = self.create_timer(timer_period, self.movimenta)
+        #self.timer = self.create_timer(timer_period, self.movimenta)
         self.vel_msg = Twist()
         self.vel_msg.linear.x = 0.0  
         self.vel_msg.linear.y = 0.0 
@@ -18,209 +18,150 @@ class VelocidadePub(Node):
         self.vel_msg.angular.x = 0.0
         self.vel_msg.angular.y = 0.0  
         self.vel_msg.angular.z = 0.0
-        self.get_logger().info('criou publisher!!')
-
-    def movimenta(self, tipoMovimento):
-        if(tipoMovimento == 1):
-            self.andaFrente()
-        elif(tipoMovimento == 2):
-            self.andaEsquerda()
-        elif(tipoMovimento == 3):
-            self.andaDireita()
-        elif(tipoMovimento == 4):
-            self.viraEsquerda()
-        elif(tipoMovimento == 5):
-            self.viraDireita()
-        elif(tipoMovimento == 6):
-            self.re()
-        elif(tipoMovimento == 7):
-            self.rodar90()
-
-    def para(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.0
-        move_cmd.angular.z = 0.0
-
-        print(self.velocity_publisher)
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Parado.')
-
-    def andaFrente(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.08
-        move_cmd.angular.z = 0.0
-
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Andando para frente com velocidade 0.1')
-
-    def andaEsquerda(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.1
-        move_cmd.angular.z = 0.1
-
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Andando para esquerda com velocidade 0.1')
-
-    def andaDireita(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.1
-        move_cmd.angular.z = -0.1
-
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Andando para direita com velocidade 0.1')
-
-    def viraEsquerda(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.0
-        move_cmd.angular.z = 0.2
-
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Virando para esquerda com velocidade 0.2')
-
-    def viraDireita(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.0
-        move_cmd.angular.z = -0.2
-
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Virando para direita com velocidade 0.2')
-
-    def re(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = -0.1
-        move_cmd.angular.z = 0.0
-
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Virando para direita com velocidade 0.2')
-
-    def rodar90(self):
-        move_cmd = Twist()
-        move_cmd.linear.x = 0.0
-        move_cmd.angular.z = -0.5
-
-        self.velocity_publisher.publish(move_cmd)
-        self.get_logger().info('Rotacionando 90 graus para direita')
-
-
 
 def main(args=None):
     rclpy.init(args=args)
 
+    #subscreve ao leiser e ao publiser de movimentos
     laser = LaserSub()
     velocidade = VelocidadePub()
 
-    ultimoMov = 1
-    contLoop = 0
-    contFrente = 0
+    command = Twist()
+    command.linear.x = 0.0
+    command.angular.z = 0.0
 
-    ultimoNoroeste = -1.0
-    ultimoNordeste = -1.0
+    proximo_parede = 0 #muda para 1 quando localizar a primeira parede na esquerda
+
+    print("Virando...")
+    command.angular.z = -0.1
+    command.linear.x = 0.1
+    velocidade.velocity_publisher.publish(command)
+
+    range_front = []
+    range_right = []
+    range_left  = []
+    minimo_frente = 0
+    minimo_direita = 0
+    minimo_esquerda = 0
+    i_front = 0
+    i_right = 0
+    i_left = 0
+
+    contLoop = 0
+    cont = 0
 
     while(True):
         rclpy.spin_once(laser)
-        # print('sudoeste: ', str(laser.sudoeste))
-        # print('oeste: ', str(laser.oeste))
-        # print('noroeste: ', str(laser.noroeste))
-        # print('norte: ', str(laser.norte))
-        # print('nordeste: ', str(laser.nordeste))
-        # print('leste: ', str(laser.leste))
-        # print('sudeste: ', str(laser.sudeste))
+        print('contLoop', contLoop)
 
-        andarEsquerda = 2
-        andarDireita = 3
-        virarEsquerda = 4
-        virarDireita = 5
-        re = 6
-        rodar90graus = 7
+        msg = laser.msg
+        ranges = msg.ranges
+        # calcula a frente do robo do grau -5 até 5
+        range_front[:5] = msg.ranges[5:0:-1]  
+        range_front[5:] = msg.ranges[-1:-5:-1]
+        # na direita entre 300 e 345 graus
+        range_right = msg.ranges[300:345]
+        # na esquerda entre 15 e 60 graus
+        range_left = msg.ranges[60:15:-1]
+        # pega os menores valores em cada direção
+        min_range,i_range = min( (ranges[i_range],i_range) for i_range in range(len(ranges)) )
+        minimo_frente,i_front = min( (range_front[i_front],i_front) for i_front in range(len(range_front)) )
+        minimo_direita,i_right = min( (range_right[i_right],i_right) for i_right in range(len(range_right)) )
+        minimo_esquerda,i_left  = min( (range_left [i_left ],i_left ) for i_left  in range(len(range_left )) )
 
-        tipoMovimento = 1 #andar pra frente
+        print('minimo_esquerda: ' + str(round(minimo_esquerda,3)) + ' - minimo_frente: ' + str(round(minimo_frente,3)) + ' - minimo_direita: ' + str(round(minimo_direita,3)))
 
-        seguroOeste = (laser.oeste > 0.10 and laser.oeste != 0.0) or laser.oeste == math.inf
-        seguroNoroeste = (laser.noroeste > 0.25 and laser.noroeste != 0.0) or laser.noroeste == math.inf
-        seguroNorte = (laser.norte > 0.3 and laser.norte != 0.0) or laser.norte == math.inf
-        seguroNordeste = (laser.nordeste > 0.25 and laser.nordeste != 0.0) or laser.nordeste == math.inf
-        seguroLeste = (laser.leste > 0.10 and laser.leste != 0.0) or laser.leste == math.inf
-        
-        print('')
-        print('oeste: ' + str(round(laser.oeste, 3)) + ' - noroeste: ' + str(round(laser.noroeste, 3)) +
-            ' - norte: ' + str(round(laser.norte, 3)) + ' - nordeste: ' + str(round(laser.nordeste, 3)) +
-            ' - leste: ' + str(round(laser.leste, 3))) 
-        print('oeste: ' + str(seguroOeste)  + ' - noroeste: ' + str(seguroNoroeste) + ' - norte: ' + 
-            str(seguroNorte) + ' - nordeste: ' + str(seguroNordeste) + ' - leste: ' + str(seguroLeste))
-        print('')
+        # detecta a parede da esquerda mais próxima 
+        while(proximo_parede == 0):
+            rclpy.spin_once(laser)
 
-        tratouPerigo = False
-        if(seguroNorte == False):
-            if((laser.noroeste + laser.oeste + laser.sudoeste) > (laser.nordeste + laser.leste + laser.sudeste)):
-            #if(laser.oeste > laser.leste):
-                tipoMovimento = virarEsquerda
+            msg = laser.msg
+            ranges = msg.ranges
+            # calcula a frente do robo do grau -5 até 5
+            range_front[:5] = msg.ranges[5:0:-1]  
+            range_front[5:] = msg.ranges[-1:-5:-1]
+            # na direita entre 300 e 345 graus
+            range_right = msg.ranges[300:345]
+            # na esquerda entre 15 e 60 graus
+            range_left = msg.ranges[60:15:-1]
+            # pega os menores valores em cada direção
+            min_range,i_range = min( (ranges[i_range],i_range) for i_range in range(len(ranges)) )
+            minimo_frente,i_front = min( (range_front[i_front],i_front) for i_front in range(len(range_front)) )
+            minimo_esquerda,i_right = min( (range_right[i_right],i_right) for i_right in range(len(range_right)) )
+            minimo_direita,i_left  = min( (range_left [i_left ],i_left ) for i_left  in range(len(range_left )) )
+
+            print('minimo_esquerda: ' + str(round(minimo_esquerda,3)) + ' - minimo_frente: ' + str(round(minimo_frente,3)) + ' - minimo_direita: ' + str(round(minimo_direita,3)))
+
+            print('Movendo em direção a parede...')
+            if(minimo_frente > 0.2 and minimo_direita > 0.2 and minimo_esquerda > 0.2):    
+                command.angular.z = -0.1    # if nothing near, go forward
+                command.linear.x = 0.1
+                print("Seguindo reto...")
+            elif(minimo_esquerda < 0.2): # if wall on left, start tracking
+                proximo_parede = 1       
+                print("Tracking...")            
             else:
-                tipoMovimento = virarDireita
+                print('virando esquerda')
+                command.angular.z = 0.25   # if not on left, turn right 
+                command.linear.x = 0.0
 
-            if(laser.leste > 1.3):
-                tipoMovimento = rodar90graus
-            
-            tratouPerigo = True
-        elif(seguroNoroeste == False):
-            tipoMovimento = virarDireita
-            tratouPerigo = True
-        elif(seguroNordeste == False):
-            tipoMovimento = virarEsquerda
-            tratouPerigo = True
+            velocidade.velocity_publisher.publish(command)
 
-        if(tipoMovimento == 1 and (contLoop % 2) == 0):
-            #print('ultimo - atual: ' , (ultimoNoroeste - laser.noroeste))
-            if((ultimoNoroeste - laser.noroeste) >= 0.04):
-                tipoMovimento = virarDireita
-            elif((ultimoNordeste - laser.nordeste) >= 0.04):
-                tipoMovimento = virarEsquerda
-
-        # if(tratouPerigo == False and seguroLeste == False):
-        #     tipoMovimento = virarEsquerda
-        #     tratouPerigo = True
-        # if(tratouPerigo == False and seguroOeste == False):
-        #     tipoMovimento = virarDireita
-        #     tratouPerigo = True
-
-        print('tratouPerigo:', tratouPerigo)
-        print('tipoMovimento:', tipoMovimento)
-        print('contLoop:', contLoop)
-        if(tratouPerigo and (ultimoMov != 1) and 
-            (ultimoMov != andarEsquerda) and 
-            (ultimoMov != andarDireita) and 
-            (tipoMovimento != ultimoMov)):
-            print('Corrigiu!')
-            tipoMovimento = ultimoMov
-
-    
-
-
-        ultimoMov = tipoMovimento
-        contLoop += 1
-        if(tipoMovimento == 1):
-            contFrente += 1
+        if(minimo_frente > 0.22):
+            if(minimo_esquerda < 0.135):
+                print("Range: {:.2f}m - Muito próximo. Dando ré.".format(minimo_esquerda))
+                command.angular.z = -0.2
+                command.linear.x = -0.1
+                cont = 0
+            elif(minimo_esquerda < 0.15):
+                print("Range: {:.2f}m - Muito próximo. Virando direita.".format(minimo_esquerda))
+                command.angular.z = -0.2
+                command.linear.x = 0.0
+                cont = 0
+            elif(minimo_esquerda > 0.3):
+                print('cont', cont)
+                if(cont > 5):
+                    print("Range: {:.2f}m - Seguindo parede; virando pra esquerda (rápido).".format(minimo_esquerda))
+                    command.angular.z = 0.4
+                    command.linear.x = 0.0
+                cont += 1
+            elif(minimo_esquerda > 0.22):
+                print("Range: {:.2f}m - Seguindo parede; virando pra esquerda.".format(minimo_esquerda))
+                command.angular.z = 0.2
+                command.linear.x = 0.1
+                cont = 0
+            else:
+                print("Range: {:.2f}m - Seguindo parede; virando pra direita.".format(minimo_esquerda))
+                command.angular.z = -0.2
+                command.linear.x = 0.1
+                cont = 0
         else:
-            contFrente = 0
+            print("Detectou obstaculo na frente. Virando pra direita...")
+            command.angular.z = -0.2
+            command.linear.x = 0.0
+            velocidade.velocity_publisher.publish(command)
+            while(minimo_frente < 0.3):
+                rclpy.spin_once(laser)
 
-        if(contFrente == 5):
-            tipoMovimento = 5
-        velocidade.movimenta(tipoMovimento)
+                msg = laser.msg
+                ranges = msg.ranges
+                # calcula a frente do robo do grau -5 até 5
+                range_front[:5] = msg.ranges[5:0:-1]  
+                range_front[5:] = msg.ranges[-1:-5:-1]
+                # na direita entre 300 e 345 graus
+                range_right = msg.ranges[300:345]
+                # na esquerda entre 15 e 60 graus
+                range_left = msg.ranges[60:15:-1]
+                # pega os menores valores em cada direção
+                min_range,i_range = min( (ranges[i_range],i_range) for i_range in range(len(ranges)) )
+                minimo_frente,i_front = min( (range_front[i_front],i_front) for i_front in range(len(range_front)) )
+                minimo_direita,i_right = min( (range_right[i_right],i_right) for i_right in range(len(range_right)) )
+                minimo_esquerda ,i_left  = min( (range_left [i_left ],i_left ) for i_left  in range(len(range_left )) )      
+                pass
 
-        if((contLoop % 2) == 0):
-            ultimoNoroeste = laser.noroeste
-            ultimoNordeste = laser.nordeste
-        
-        # if( (laser.norte < 0.4 and laser.norte != 0.0) or
-        #     (laser.noroeste < 0.5 and laser.noroeste != 0.0) or 
-        #     (laser.nordeste < 0.4 and laser.nordeste != 0.0)):
-        #     tem_parede = 1
-        #     print("Distância da parede: ", str(laser.norte))
-        #     print("com parede à frente")
-        # else:
-        #     tem_parede = 0
-        #     print("sem parede à frente")
+        velocidade.velocity_publisher.publish(command)
 
-        #velocidade.movimenta(tem_parede)
+        contLoop += 1
             
 if __name__ == '__main__':
     main()

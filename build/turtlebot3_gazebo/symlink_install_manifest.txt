@@ -1,6 +1,8 @@
 /home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/lib/turtlebot3_gazebo/turtlebot3_drive
 /home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo//launch/empty_world.launch.py
 /home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo//launch/labirinto_world.launch.py
+/home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo//launch/labirinto_world_pos2.launch.py
+/home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo//launch/labirinto_world_pos3.launch.py
 /home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo//launch/robot_state_publisher.launch.py
 /home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo//launch/spawn_turtlebot3.launch.py
 /home/brunofarias/turtlebot3_ws/install/turtlebot3_gazebo/share/turtlebot3_gazebo//launch/turtlebot3_dqn_stage1.launch.py

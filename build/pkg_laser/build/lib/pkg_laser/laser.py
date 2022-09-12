@@ -26,6 +26,7 @@ class LaserSub(Node):
     def listener_callback(self, msg):
         # checar se precisa iniciar no init
         self.norte = msg.ranges[0]
+        self.nornoroeste = msg.ranges[22]
         self.noroeste = msg.ranges[45]
         self.oeste = msg.ranges[90]
         self.sudeste = msg.ranges[135]
@@ -33,6 +34,8 @@ class LaserSub(Node):
         self.sudoeste = msg.ranges[225]
         self.leste = msg.ranges[270]
         self.nordeste = msg.ranges[315]
+        self.nornordeste = msg.ranges[338]
+        self.msg = msg
         
 def main(args=None):
     rclpy.init(args=args)
